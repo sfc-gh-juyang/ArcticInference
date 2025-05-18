@@ -41,9 +41,6 @@ assert os.environ.get("VLLM_USE_V1", "0") == "0", (
     "embedding is only supported for vLLM v0"
 )
 
-# Add the project root to the path
-sys.path.insert(0, str(Path(__file__).parent.parent.parent))
-from arctic_inference.grpc.grpc_utils import exception_handler
 
 # Import the generated protobuf code
 try:
