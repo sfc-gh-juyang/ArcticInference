@@ -382,12 +382,13 @@ class ManagerServicer(inference_pb2_grpc.InferenceServiceServicer):
                 )
                 replica_info_list.append(r.replica_infos[0])
                 n_healthy_replicas += 1
-            except grpc.RpcError:
+            except grpc.RpcError as e:
                 # Mark replica unhealthy and fall through to default response.
+                logger.warning(f"grpc Error: {e} getting info from replica {replica.id} mark unhealthy")
                 await self.replica_manager._mark_unhealthy(replica)
-            except (AttributeError, IndexError):
+            except (AttributeError, IndexError) as e:
                 # Handle case where replica_infos is missing or empty
-                logger.warning(f"Failed to get replica info from {replica.id}: missing or empty replica_infos")
+                logger.warning(f"Failed to get replica info from {replica.id}: {e}, mark unhealthy")
                 await self.replica_manager._mark_unhealthy(replica)
 
         # Fallback minimal info when no replica is healthy.

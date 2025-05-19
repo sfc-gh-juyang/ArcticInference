@@ -110,7 +110,7 @@ class EncodeBenchmark:
         
         # Create prompts by repeating "hello " the specified number of times for each length
         prompts = [
-            "hello " * prompt_length
+            "hello " * (prompt_length - 2)
             for prompt_length in prompt_lengths
         ]
 

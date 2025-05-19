@@ -14,10 +14,12 @@ MODEL_LIST=(
 CURR_DIR=$(pwd)
 FILE_DIR=$(dirname $0)
 MODEL=${1:-"BAAI/bge-base-en-v1.5"}
-N_REQUESTS=${2:-1280}
+N_REQUESTS=${2:-12800}
 PROMPT_LENGTH=${3:-50}
-CONCURRENCY=${4:-256}
+CONCURRENCY=${4:-1024}
 DISTRIBUTION=${5:-"fixed"}
+BATCH_SIZE=${6:-1,4,16,64}
+NUM_REPLICAS=${7:-4}
 
 function run_benchmark_vllm() {
     echo "Running vllm benchmark for $MODEL"
@@ -27,7 +29,7 @@ function run_benchmark_vllm() {
     sleep 60
     python ${FILE_DIR}/benchmark_http.py --model $MODEL \
     --server http://localhost:8000 \
-    --batch-sizes 1,4,16,64 \
+    --batch-sizes $BATCH_SIZE \
     --requests $N_REQUESTS \
     --concurrency $CONCURRENCY \
     --prompt-length $PROMPT_LENGTH \
@@ -38,15 +40,13 @@ function run_benchmark_vllm() {
 
 function run_benchmark_arctic() {
     echo "Running arctic_inference benchmark for $MODEL"
-    pkill -f replica_manager.py
     pkill -f replica.py
-    # python arctic_inference/grpc/replica_manager.py --model $MODEL --num-replicas 4 --port 50050 > arctic.log &
-    python ${FILE_DIR}/../arctic_inference/grpc/replica_manager.py --model $MODEL --num-replicas 4 --port 50050 --load-balancer "least_loaded" > arctic.log &
+    python arctic_inference/grpc/replica_manager.py --model $MODEL --num-replicas $NUM_REPLICAS --port 50050 > arctic.log &
     pid=$!
     sleep 60
     python ${FILE_DIR}/benchmark.py --model $MODEL \
     --server localhost:50050 \
-    --batch-sizes 1,4,16,64 \
+    --batch-sizes $BATCH_SIZE \
     --requests $N_REQUESTS \
     --concurrency $CONCURRENCY \
     --prompt-length $PROMPT_LENGTH \
@@ -55,10 +55,14 @@ function run_benchmark_arctic() {
     pkill -f python
 }
 
-# Generate gRPC code
-pushd ${FILE_DIR}/../ && \
-python arctic_inference/grpc/generate_proto.py >> benchmark.log 2>&1 && \
-popd;
+function setup() {
+    pip install -U grpcio grpcio-tools protobuf grpcio-reflection
+    # Generate gRPC code
+    pushd ${FILE_DIR}/../ && \
+    python arctic_inference/grpc/generate_proto.py >> benchmark.log 2>&1 && \
+    popd;
+}
+
 
 run_benchmark_vllm
 run_benchmark_arctic

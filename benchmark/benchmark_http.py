@@ -52,9 +52,17 @@ class HTTPEmbeddingBenchmark:
         self, length: int, count: int, distribution: "str"
     ) -> List[str]:
         """Generate random prompts of specified length."""
-        return [
-            "hello " * gen_random_num(length, 1, distribution) for _ in range(count)
+
+        # Generate prompt lengths according to the specified distribution
+        prompt_lengths = gen_random_num(length, count, distribution)
+        
+        # Create prompts by repeating "hello " the specified number of times for each length
+        prompts = [
+            "hello " * (prompt_length - 2)
+            for prompt_length in prompt_lengths
         ]
+
+        return prompts
 
     async def _embed_batch(
         self, session: aiohttp.ClientSession, batch_size: int, prompts: List[str]
