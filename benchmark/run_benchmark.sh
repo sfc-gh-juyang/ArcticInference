@@ -43,7 +43,7 @@ function run_benchmark_arctic() {
     pkill -f replica.py
     python arctic_inference/grpc/replica_manager.py --model $MODEL --num-replicas $NUM_REPLICAS --port 50050 > arctic.log &
     pid=$!
-    sleep $((4*${NUM_REPLICAS}+20))
+    sleep 20
     python ${FILE_DIR}/benchmark.py --model $MODEL \
     --server localhost:50050 \
     --batch-sizes $BATCH_SIZE \
@@ -56,15 +56,15 @@ function run_benchmark_arctic() {
 }
 
 function setup() {
-    pip install -U grpcio grpcio-tools protobuf grpcio-reflection
+    pip install -U grpcio grpcio-tools protobuf grpcio-reflection > benchmark.log 2>&1;
     # Generate gRPC code
-    pushd ${FILE_DIR}/../ && \
-    python arctic_inference/grpc/generate_proto.py >> benchmark.log 2>&1 && \
-    popd;
+    cd ${FILE_DIR}/../;
+    python arctic_inference/grpc/generate_proto.py >> benchmark.log 2>&1;
+    cd ${CURR_DIR};
 }
 
 
+setup
 run_benchmark_vllm
 run_benchmark_arctic
-
 

@@ -381,7 +381,7 @@ class InferenceServicer(inference_pb2_grpc.InferenceServiceServicer):
                 replica_infos=[replica_info, replica_info],
                 n_replicas=2,
                 n_healthy_replicas=2,
-                error="",
+                message="",
             )
         except Exception as e:
             logger.exception(f"Error getting model info: {e}")
@@ -391,7 +391,7 @@ class InferenceServicer(inference_pb2_grpc.InferenceServiceServicer):
                 replica_infos=[],
                 n_replicas=1,
                 n_healthy_replicas=0,
-                error=f"Error getting model info: {str(e)}",
+                message=f"Error getting model info: {str(e)}",
             )
 
     async def HealthCheck(

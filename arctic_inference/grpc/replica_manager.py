@@ -241,6 +241,7 @@ class ReplicaManager:
     ) -> Optional[ReplicaInfo]:
         """Start a replica process and wait until it reports healthy."""
         cmd = self._build_replica_cmd(host, port)
+        time.sleep(2)
         logger.info("Starting replica on port %d: %s", port, " ".join(cmd))
 
         # Use line-buffered output so we can stream logs and avoid deadlocks.
@@ -394,9 +395,9 @@ class ManagerServicer(inference_pb2_grpc.InferenceServiceServicer):
         # Fallback minimal info when no replica is healthy.
         return inference_pb2.ReplicaInfoResponse(
             replica_infos=replica_info_list,
-            n_replicas=len(replica_info_list),
+            n_replicas=self.replica_manager.num_replicas,
             n_healthy_replicas=n_healthy_replicas,
-            error="",
+            message="",
         )
 
 
@@ -413,7 +414,6 @@ async def serve(args_list: List[str]):
         lb=LoadBalancerType(args.load_balancer),
         health_interval=args.health_interval,
     )
-    await lm.start()
 
     grpc_server = grpc.aio.server(
         ThreadPoolExecutor(max_workers=args.workers),
@@ -431,6 +431,7 @@ async def serve(args_list: List[str]):
 
     logger.info("Manager server listening on %s", listen_addr)
     await grpc_server.start()
+    await lm.start()
 
     try:
         await grpc_server.wait_for_termination()

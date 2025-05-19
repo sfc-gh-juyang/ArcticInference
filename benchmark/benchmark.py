@@ -17,15 +17,15 @@ import arctic_inference.grpc.proto.python.inference_pb2_grpc as inference_pb2_gr
 
 def gen_random_num(param: int, count: int, distribution: str) -> np.ndarray:
     """Generate random values based on the specified distribution.
-    
+
     Args:
         param: The maximum value for the distribution parameter (max length or batch size)
         count: Number of values to generate
         distribution: Type of distribution - "uniform", "normal", or "fixed"
-        
+
     Returns:
         A single integer if count=1, otherwise a numpy array of integers
-        
+
     Raises:
         ValueError: If an invalid distribution is specified
     """
@@ -51,7 +51,7 @@ def gen_random_num(param: int, count: int, distribution: str) -> np.ndarray:
 
 class EncodeBenchmark:
     """Benchmark for the Encode RPC method of embedding models.
-    
+
     This class provides functionality to benchmark the performance of the Encode
     method with different batch sizes, distributions, and concurrency levels.
     """
@@ -67,7 +67,7 @@ class EncodeBenchmark:
         distribution: str,
     ):
         """Initialize the benchmark with the given parameters.
-        
+
         Args:
             server_address: Address of the gRPC server to benchmark
             batch_sizes: List of batch sizes to test
@@ -84,48 +84,74 @@ class EncodeBenchmark:
         self.prompt_length = prompt_length
         self.model_name = model_name
         self.distribution = distribution
-        
+
         # Pre-generate all prompts needed for the benchmark
         self.prompts = self._generate_prompts(
             prompt_length, max(batch_sizes) * num_requests, distribution
         )
 
+        # Create gRPC channel with appropriate buffer sizes
+        self.channel = grpc.aio.insecure_channel(
+            self.server_address,
+            options=[
+                ("grpc.max_send_message_length", 100 * 1024 * 1024),
+                ("grpc.max_receive_message_length", 100 * 1024 * 1024),
+            ],
+        )
+        self.stub = inference_pb2_grpc.InferenceServiceStub(self.channel)
+
     def _generate_prompts(
         self, length: int, count: int, distribution: str
     ) -> List[str]:
         """Generate random prompts with lengths following the specified distribution.
-        
+
         Args:
             length: Maximum length of prompts
             count: Number of prompts to generate
             distribution: Distribution type for prompt lengths
-            
+
         Returns:
             List of generated prompts
         """
         # Generate prompt lengths according to the specified distribution
         prompt_lengths = gen_random_num(length, count, distribution)
-        print(np.any(prompt_lengths > length))
-        
+
         # Create prompts by repeating "hello " the specified number of times for each length
-        prompts = [
-            "hello " * (prompt_length - 2)
-            for prompt_length in prompt_lengths
-        ]
+        prompts = ["hello " * (prompt_length - 2) for prompt_length in prompt_lengths]
 
         return prompts
 
+    async def wait_for_server_ready(self):
+        while True:
+            try:
+                # Get server info
+                info_response = await self.stub.GetReplicaInfo(
+                    inference_pb2.ReplicaInfoRequest()
+                )
+
+                if info_response.n_healthy_replicas < info_response.n_replicas:
+                    print(
+                        "Waiting for server to be ready... {} / {}".format(
+                            info_response.n_healthy_replicas, info_response.n_replicas
+                        )
+                    )
+                    await asyncio.sleep(2)
+                else:
+                    break
+            except Exception as e:
+                print(f"Failed to check server health: {e}")
+                return False
+
     async def _encode_batch(
-        self, stub, batch_size: int, request_id: str, prompts: List[str]
+        self, batch_size: int, request_id: str, prompts: List[str]
     ) -> Tuple[float, int]:
         """Make a single encode request with the given batch size.
-        
+
         Args:
-            stub: gRPC stub for making the request
             batch_size: Batch size for this request
             request_id: Unique ID for this request
             prompts: List of prompts to encode
-            
+
         Returns:
             Tuple of (elapsed time, total tokens) if successful, (0, 0) if failed
         """
@@ -142,7 +168,7 @@ class EncodeBenchmark:
 
         try:
             # Send the request and wait for response
-            response = await stub.Encode(request)
+            response = await self.stub.Encode(request)
             if response.error:
                 print(f"Error in request {request_id}: {response.error}")
                 return 0, 0
@@ -168,15 +194,13 @@ class EncodeBenchmark:
         self,
         batch_size: int,
         distribution: str,
-        stub: inference_pb2_grpc.InferenceServiceStub,
     ) -> Tuple[float, float, float]:
         """Run concurrent encode requests and measure performance metrics.
-        
+
         Args:
             batch_size: Batch size to use for requests
             distribution: Distribution for actual batch sizes
-            stub: gRPC stub for making requests
-            
+
         Returns:
             Tuple of (average latency, throughput, success rate %)
         """
@@ -186,16 +210,16 @@ class EncodeBenchmark:
         # Create tasks for all requests with appropriate batch sizes
         for i in range(self.num_requests):
             request_id = f"bench-{batch_size}-{i}-{uuid.uuid4()}"
-            
+
             # Determine actual batch size based on distribution
             curr_batch_size = gen_random_num(batch_size, 1, distribution)
-            
+
             # Get the prompts for this batch
             prompts = self.prompts[prompt_index : prompt_index + curr_batch_size]
             prompt_index += curr_batch_size
 
             # Create a task for this request
-            tasks.append(self._encode_batch(stub, curr_batch_size, request_id, prompts))
+            tasks.append(self._encode_batch(curr_batch_size, request_id, prompts))
 
         # Set up concurrency control with semaphore
         semaphore = asyncio.Semaphore(self.concurrency)
@@ -207,7 +231,7 @@ class EncodeBenchmark:
 
         # Start timer for overall throughput measurement
         start_time = time.time()
-        
+
         # Run all tasks concurrently with concurrency limit
         results = await asyncio.gather(*[bounded_encode_batch(task) for task in tasks])
         total_time = time.time() - start_time
@@ -232,20 +256,14 @@ class EncodeBenchmark:
         """Run the benchmark with all configured batch sizes and collect results."""
         print(f"\nConnecting to server: {self.server_address}")
 
-        # Create gRPC channel with appropriate buffer sizes
-        channel = grpc.aio.insecure_channel(
-            self.server_address,
-            options=[
-                ("grpc.max_send_message_length", 100 * 1024 * 1024),
-                ("grpc.max_receive_message_length", 100 * 1024 * 1024),
-            ],
-        )
-        stub = inference_pb2_grpc.InferenceServiceStub(channel)
-
         # Print table header for results
         print("\nRESULTS:")
-        print("| Batch Size | Seq Length | Avg Latency (s) | Throughput (K tokens/s) | Success Rate |")
-        print("|------------|------------|-----------------|------------------------|---------------|")
+        print(
+            "| Batch Size | Seq Length | Avg Latency (s) | Throughput (K tokens/s) | Success Rate |"
+        )
+        print(
+            "|------------|------------|-----------------|------------------------|---------------|"
+        )
 
         # Run benchmark for each batch size
         for batch_size in self.batch_sizes:
@@ -255,54 +273,24 @@ class EncodeBenchmark:
                     avg_latency,
                     throughput,
                     success_rate,
-                ) = await self._run_concurrent_requests(
-                    batch_size, self.distribution, stub
-                )
-                
+                ) = await self._run_concurrent_requests(batch_size, self.distribution)
+
                 # Print results
                 if avg_latency > 0:
                     print(
                         f"| {batch_size:^10} | {self.prompt_length:^10} | {avg_latency:^15.4f} | {throughput / 1000:^22.2f} | {success_rate:^12.2f}% |"
                     )
                 else:
-                    print(f"| {batch_size:^10} | {self.prompt_length:^10} | {'N/A':^15} | {'N/A':^22} | {0:^12.2f}% |")
+                    print(
+                        f"| {batch_size:^10} | {self.prompt_length:^10} | {'N/A':^15} | {'N/A':^22} | {0:^12.2f}% |"
+                    )
             except Exception as e:
-                print(f"| {batch_size:^10} | {self.prompt_length:^10} | Error: {str(e):<11} | {'N/A':^22} | {'N/A':^12} |")
+                print(
+                    f"| {batch_size:^10} | {self.prompt_length:^10} | Error: {str(e):<11} | {'N/A':^22} | {'N/A':^12} |"
+                )
 
         # Clean up
-        await channel.close()
-
-
-async def check_server_health(address: str) -> bool:
-    """Check if the server is healthy and ready for benchmarking.
-    
-    Args:
-        address: Server address to check
-        
-    Returns:
-        True if server is healthy, False otherwise
-    """
-    try:
-        # Create channel and stub
-        channel = grpc.aio.insecure_channel(address)
-        stub = inference_pb2_grpc.InferenceServiceStub(channel)
-
-        # Send health check request
-        response = await stub.HealthCheck(inference_pb2.HealthCheckRequest())
-
-        # Get server info
-        info_response = await stub.GetReplicaInfo(inference_pb2.ReplicaInfoRequest())
-
-        # Print server status
-        print(f"N health replicas / N replicas: {info_response.n_healthy_replicas} / {info_response.n_replicas}")
-        print(f"Server health: {response.healthy}")
-        print(f"Server message: {response.message}")
-
-        await channel.close()
-        return response.healthy
-    except Exception as e:
-        print(f"Failed to check server health: {e}")
-        return False
+        await self.channel.close()
 
 
 async def main():
@@ -353,12 +341,6 @@ async def main():
             )
             return
 
-    # Check server health before benchmarking
-    is_healthy = await check_server_health(args.server)
-    if not is_healthy:
-        print("Server is not healthy. Exiting.")
-        return
-
     # Initialize and run benchmark
     benchmark = EncodeBenchmark(
         server_address=args.server,
@@ -369,6 +351,8 @@ async def main():
         model_name=args.model,
         distribution=args.distribution,
     )
+
+    await benchmark.wait_for_server_ready()
 
     # Print benchmark configuration
     print("\nStarting benchmark...")
