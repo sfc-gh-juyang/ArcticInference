@@ -64,6 +64,39 @@ class HTTPEmbeddingBenchmark:
 
         return prompts
 
+    async def _warmup(self, session: aiohttp.ClientSession) -> bool:
+        """Run warmup requests to ensure the server is ready."""
+        print("\nRunning warmup requests...")
+        warmup_prompts = self._generate_prompts(self.prompt_length, 20, "fixed")
+        
+        for i in range(20):
+            try:
+                if self.backend == "openai" or self.backend == "vllm":
+                    request_body = {
+                        "input": [warmup_prompts[i]],
+                        "model": self.model_name,
+                    }
+                elif self.backend == "TEI":
+                    request_body = {
+                        "inputs": [warmup_prompts[i]],
+                    }
+
+                async with session.post(
+                    self.api_url,
+                    json=request_body,
+                    headers={"Content-Type": "application/json"},
+                ) as response:
+                    if response.status != 200:
+                        error_text = await response.text()
+                        print(f"Warmup request {i} failed: {response.status}, {error_text}")
+                        return False
+            except Exception as e:
+                print(f"Warmup request {i} failed: {e}")
+                return False
+        
+        print("Warmup completed successfully")
+        return True
+
     async def _embed_batch(
         self, session: aiohttp.ClientSession, batch_size: int, prompts: List[str]
     ) -> Tuple[float, float]:
@@ -166,6 +199,11 @@ class HTTPEmbeddingBenchmark:
         # Create HTTP session
         timeout = aiohttp.ClientTimeout(total=60)
         async with aiohttp.ClientSession(timeout=timeout) as session:
+            # Run warmup requests
+            if not await self._warmup(session):
+                print("Warmup failed, exiting benchmark")
+                return
+
             # Run benchmark for each batch size
             print("\nRESULTS:")
             print("| Batch Size | Seq Length | Avg Latency (s) | Throughput (K tokens/s) | Success Rate |")

@@ -142,6 +142,29 @@ class EncodeBenchmark:
                 print(f"Failed to check server health: {e}")
                 return False
 
+    async def _warmup(self):
+        """Run warmup requests to ensure the server is ready."""
+        print("\nRunning warmup requests...")
+        warmup_prompts = self._generate_prompts(self.prompt_length, 20, "fixed")
+        
+        for i in range(20):
+            try:
+                request_id = f"warmup-{i}-{uuid.uuid4()}"
+                request = inference_pb2.EncodeRequest(
+                    request_id=request_id,
+                    n_prompts=1,
+                    prompts=[warmup_prompts[i]],
+                    priority=0,
+                    model_name=self.model_name,
+                )
+                await self.stub.Encode(request)
+            except Exception as e:
+                print(f"Warmup request {i} failed: {e}")
+                return False
+        
+        print("Warmup completed successfully")
+        return True
+
     async def _encode_batch(
         self, batch_size: int, request_id: str, prompts: List[str]
     ) -> Tuple[float, int]:
@@ -255,6 +278,11 @@ class EncodeBenchmark:
     async def run_benchmark(self):
         """Run the benchmark with all configured batch sizes and collect results."""
         print(f"\nConnecting to server: {self.server_address}")
+
+        # Run warmup requests
+        if not await self._warmup():
+            print("Warmup failed, exiting benchmark")
+            return
 
         # Print table header for results
         print("\nRESULTS:")
