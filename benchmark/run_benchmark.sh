@@ -43,7 +43,7 @@ function run_benchmark_arctic() {
     pkill -f replica.py
     python arctic_inference/grpc/replica_manager.py --model $MODEL --num-replicas $NUM_REPLICAS --port 50050 > arctic.log &
     pid=$!
-    sleep 60
+    sleep $((4*${NUM_REPLICAS}+20))
     python ${FILE_DIR}/benchmark.py --model $MODEL \
     --server localhost:50050 \
     --batch-sizes $BATCH_SIZE \

@@ -9,8 +9,6 @@ import grpc
 import sys
 from pathlib import Path
 from typing import List, Dict, Any, Tuple
-from concurrent.futures import ThreadPoolExecutor
-from enum import Enum
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 import arctic_inference.grpc.proto.python.inference_pb2 as inference_pb2
@@ -107,10 +105,11 @@ class EncodeBenchmark:
         """
         # Generate prompt lengths according to the specified distribution
         prompt_lengths = gen_random_num(length, count, distribution)
+        print(np.any(prompt_lengths > length))
         
         # Create prompts by repeating "hello " the specified number of times for each length
         prompts = [
-            "hello " * (prompt_length - 3)
+            "hello " * (prompt_length - 2)
             for prompt_length in prompt_lengths
         ]
 
@@ -245,10 +244,8 @@ class EncodeBenchmark:
 
         # Print table header for results
         print("\nRESULTS:")
-        print(
-            f"{'Batch Size':^10} | {'Avg Latency (s)':^15} | {'Throughput (K tokens/s)':^25} | {'Success Rate':^15}"
-        )
-        print("-" * 75)
+        print("| Batch Size | Seq Length | Avg Latency (s) | Throughput (K tokens/s) | Success Rate |")
+        print("|------------|------------|-----------------|------------------------|---------------|")
 
         # Run benchmark for each batch size
         for batch_size in self.batch_sizes:
@@ -265,12 +262,12 @@ class EncodeBenchmark:
                 # Print results
                 if avg_latency > 0:
                     print(
-                        f"{batch_size:^10} | {avg_latency:^15.4f} | {throughput / 1000:^25.2f} | {success_rate:^15.2f}%"
+                        f"| {batch_size:^10} | {self.prompt_length:^10} | {avg_latency:^15.4f} | {throughput / 1000:^22.2f} | {success_rate:^12.2f}% |"
                     )
                 else:
-                    print(f"{batch_size:^10} | {'N/A':^15} | {'N/A':^25} | {0:^15.2f}%")
+                    print(f"| {batch_size:^10} | {self.prompt_length:^10} | {'N/A':^15} | {'N/A':^22} | {0:^12.2f}% |")
             except Exception as e:
-                print(f"{batch_size:^10} | Error: {str(e)}")
+                print(f"| {batch_size:^10} | {self.prompt_length:^10} | Error: {str(e):<11} | {'N/A':^22} | {'N/A':^12} |")
 
         # Clean up
         await channel.close()
@@ -349,9 +346,9 @@ async def main():
 
     # Validate model-specific constraints
     if args.model == "BAAI/bge-base-en-v1.5":
-        if args.prompt_length >= 510:
+        if args.prompt_length > 512:
             print(
-                "Prompt length must be less than 510 for BAAI/bge-base-en-v1.5 because "
+                "Prompt length must be less than 512 for BAAI/bge-base-en-v1.5 because "
                 "the model has a max sequence length of 512"
             )
             return

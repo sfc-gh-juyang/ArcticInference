@@ -58,7 +58,7 @@ class HTTPEmbeddingBenchmark:
         
         # Create prompts by repeating "hello " the specified number of times for each length
         prompts = [
-            "hello " * (prompt_length - 3)
+            "hello " * (prompt_length - 2)
             for prompt_length in prompt_lengths
         ]
 
@@ -168,10 +168,8 @@ class HTTPEmbeddingBenchmark:
         async with aiohttp.ClientSession(timeout=timeout) as session:
             # Run benchmark for each batch size
             print("\nRESULTS:")
-            print(
-                f"{'Batch Size':^10} | {'Avg Latency (s)':^15} | {'Throughput (K tokens/s)':^25} | {'Success Rate':^15}"
-            )
-            print("-" * 75)
+            print("| Batch Size | Seq Length | Avg Latency (s) | Throughput (K tokens/s) | Success Rate |")
+            print("|------------|------------|-----------------|------------------------|---------------|")
 
             for batch_size in self.batch_sizes:
                 try:
@@ -182,14 +180,14 @@ class HTTPEmbeddingBenchmark:
                     ) = await self._run_concurrent_requests(batch_size, session)
                     if avg_latency > 0:
                         print(
-                            f"{batch_size:^10} | {avg_latency:^15.4f} | {throughput / 1000:^25.2f} | {success_rate:^15.2f}%"
+                            f"| {batch_size:^10} | {self.prompt_length:^10} | {avg_latency:^15.4f} | {throughput / 1000:^22.2f} | {success_rate:^12.2f}% |"
                         )
                     else:
                         print(
-                            f"{batch_size:^10} | {'N/A':^15} | {'N/A':^25} | {0:^15.2f}%"
+                            f"| {batch_size:^10} | {self.prompt_length:^10} | {'N/A':^15} | {'N/A':^22} | {0:^12.2f}% |"
                         )
                 except Exception as e:
-                    print(f"{batch_size:^10} | Error: {str(e)}")
+                    print(f"| {batch_size:^10} | {self.prompt_length:^10} | Error: {str(e):<11} | {'N/A':^22} | {'N/A':^12} |")
 
 
 async def main():
