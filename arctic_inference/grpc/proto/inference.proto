@@ -91,7 +91,7 @@ message ReplicaInfoResponse {
   int32 n_replicas = 2;
   int32 n_healthy_replicas = 3;
   // error message, empty if success
-  string error = 4;
+  string message = 4;
 }
 
 // Response with replica information
