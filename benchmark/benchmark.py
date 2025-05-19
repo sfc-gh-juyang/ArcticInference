@@ -117,7 +117,7 @@ class EncodeBenchmark:
         prompt_lengths = gen_random_num(length, count, distribution)
 
         # Create prompts by repeating "hello " the specified number of times for each length
-        prompts = ["hello " * (prompt_length - 2) for prompt_length in prompt_lengths]
+        prompts = ["hello " * (prompt_length - 4) for prompt_length in prompt_lengths]
 
         return prompts
 

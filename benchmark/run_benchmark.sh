@@ -56,8 +56,8 @@ function run_benchmark_arctic() {
 }
 
 function setup() {
+    echo "Install packages and generate gRPC code"
     pip install -U grpcio grpcio-tools protobuf grpcio-reflection > benchmark.log 2>&1;
-    # Generate gRPC code
     cd ${FILE_DIR}/../;
     python arctic_inference/grpc/generate_proto.py >> benchmark.log 2>&1;
     cd ${CURR_DIR};
