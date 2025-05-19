@@ -58,7 +58,7 @@ class HTTPEmbeddingBenchmark:
         
         # Create prompts by repeating "hello " the specified number of times for each length
         prompts = [
-            "hello " * (prompt_length - 2)
+            "hello " * (prompt_length - 3)
             for prompt_length in prompt_lengths
         ]
 
