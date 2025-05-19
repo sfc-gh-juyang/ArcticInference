@@ -9,14 +9,17 @@
 ## H200
 ### TEI (does not support batch size >32)
 **prompt_length: 510**
+```
 RESULTS:
 Batch Size | Avg Latency (s) |  Throughput (K tokens/s)  |  Success Rate  
 ---------------------------------------------------------------------------
     1      |     0.0561      |          553.44           |     100.00     %
     4      |     0.2026      |          624.73           |     100.00     %
     16     |     0.8940      |          566.63           |     100.00     %
+```
 
 **prompt_length: 50**
+```
 RESULTS:
 Batch Size | Avg Latency (s) |  Throughput (K tokens/s)  |  Success Rate  
 ---------------------------------------------------------------------------
@@ -24,45 +27,51 @@ Batch Size | Avg Latency (s) |  Throughput (K tokens/s)  |  Success Rate
     4      |     0.0383      |          271.76           |     100.00     %
     16     |     0.1144      |          358.48           |     100.00     %
 
-
+```
 ### vLLM
 **prompt_length: 510**
+```
 Batch Size | Avg Latency (s) |  Throughput (K tokens/s)  |  Success Rate  
 ---------------------------------------------------------------------------
     1      |     0.6889      |          178.84           |     100.00     %
     4      |     1.3110      |          359.15           |     100.00     %
     16     |     4.9111      |          382.51           |     100.00     %
     64     |     19.7120     |          381.42           |     100.00     %
+```
 
 **prompt_length: 50**
-RESULTS:
+```
 Batch Size | Avg Latency (s) |  Throughput (K tokens/s)  |  Success Rate  
 ---------------------------------------------------------------------------
     1      |     0.3805      |           31.54           |     100.00     %
     4      |     0.6753      |           69.18           |     100.00     %
     16     |     2.1789      |           84.92           |     100.00     %
     64     |     7.9393      |           92.88           |     100.00     %
+```
 
 ### Arctic Inference
 **prompt_length: 510**
-RESULTS:
+```
 Batch Size | Avg Latency (s) |  Throughput (K tokens/s)  |  Success Rate  
 ---------------------------------------------------------------------------
     1      |     0.3126      |          398.94           |     100.00     %
     4      |     0.2933      |          1606.40          |     100.00     %
     16     |     1.1941      |          1590.29          |     100.00     %
     64     |     4.7898      |          1587.52          |     100.00     %
+```
 
 **prompt_length: 50**
-RESULTS:
+```
 Batch Size | Avg Latency (s) |  Throughput (K tokens/s)  |  Success Rate  
 ---------------------------------------------------------------------------
     1      |     0.2255      |           55.01           |     100.00     %
     4      |     0.0909      |          500.69           |     100.00     %
     16     |     0.3702      |          523.05           |     100.00     %
     64     |     1.4134      |          544.35           |     100.00     %
+```
 
 RESULTS (32 replicas):
+```
 Batch Size | Avg Latency (s) |  Throughput (K tokens/s)  |  Success Rate  
 ---------------------------------------------------------------------------
     1      |     0.1397      |           89.95           |     100.00     %
@@ -71,6 +80,7 @@ Batch Size | Avg Latency (s) |  Throughput (K tokens/s)  |  Success Rate
     64     |     0.5753      |          1406.54          |     100.00     %
 
 concurrency 1024
+```
 RESULTS:
 Batch Size | Avg Latency (s) |  Throughput (K tokens/s)  |  Success Rate  
 ---------------------------------------------------------------------------
@@ -78,7 +88,10 @@ Batch Size | Avg Latency (s) |  Throughput (K tokens/s)  |  Success Rate
     4      |     0.4871      |          399.82           |     100.00     %
     16     |     0.7225      |          1062.14          |     100.00     %
     64     |     2.0865      |          1495.68          |     100.00     %
+```
 
+concurrency 2048
+```
 RESULTS:
 Batch Size | Avg Latency (s) |  Throughput (K tokens/s)  |  Success Rate  
 ---------------------------------------------------------------------------
@@ -86,6 +99,7 @@ Batch Size | Avg Latency (s) |  Throughput (K tokens/s)  |  Success Rate
     4      |     0.9419      |          401.54           |     100.00     %
     16     |     1.3917      |          1081.58          |     100.00     %
     64     |     3.9300      |          1525.65          |     100.00     %
+```
 
 ## L40
 ### TEI
@@ -93,6 +107,7 @@ Batch Size | Avg Latency (s) |  Throughput (K tokens/s)  |  Success Rate
 
 ### vLLM
 **prompt_length: 510**
+```
 RESULTS:
 Batch Size | Avg Latency (s) |  Throughput (K tokens/s)  |  Success Rate  
 ---------------------------------------------------------------------------
@@ -100,8 +115,10 @@ Batch Size | Avg Latency (s) |  Throughput (K tokens/s)  |  Success Rate
     4      |     1.2861      |          367.04           |     100.00     %
     16     |     4.8737      |          385.71           |     100.00     %
     64     |     19.7290     |          381.66           |     100.00     %
+```
 
 **prompt_length: 50**
+```
 RESULTS:
 Batch Size | Avg Latency (s) |  Throughput (K tokens/s)  |  Success Rate  
 ---------------------------------------------------------------------------
