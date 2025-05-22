@@ -65,6 +65,6 @@ function setup() {
 
 
 setup
-# run_benchmark_vllm
+run_benchmark_vllm
 run_benchmark_arctic
 

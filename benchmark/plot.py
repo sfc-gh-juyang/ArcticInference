@@ -56,6 +56,16 @@ for length_label in length_group_labels:
             #     f"{sys} {gpu_name} {length_label} {cost_per_billion_tokens} {throughput}"
             # )
 
+for seq_len in length_group_labels:
+    for i_gpu in [0, 1]:
+        print(
+            "{}, {}, {}".format(
+                cost_data_by_length[seq_len]["vllm"][i_gpu],
+                cost_data_by_length[seq_len]["TEI"][i_gpu],
+                cost_data_by_length[seq_len]["Arctic Inference"][i_gpu],
+            )
+        )
+
 bar_width = 0.24
 
 colors = [
